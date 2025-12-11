@@ -10,13 +10,17 @@ jobs:
     steps:
       - name: Déploiement et Configuration Sécurité
         uses: appleboy/ssh-action@master
+        env:
+          # On récupère le mot de passe en clair (admin) depuis les secrets
+          PASS_CLAIR: ${{ secrets.HTPASSWD_CONTENT }}
         with:
           host: "ssh-${{ secrets.USERNAME }}.alwaysdata.net"
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
-          envs: 
-            PASS_CLAIR: ${{ secrets.HTPASSWD_CONTENT }}
+          # On passe la variable d'environnement au script
+          envs: PASS_CLAIR
           script: |
+            # --- CONFIGURATION ---
             REPO_URL="https://github.com/${{ github.repository }}.git"
             TARGET_DIR="$HOME/www"
             CLONE_DIR="$HOME/clone_temp"
@@ -36,23 +40,24 @@ jobs:
               exit 1
             fi
 
-            # --- 3. SECURITE ---
+            # --- 3. SECURITE (Nouvelle méthode) ---
             echo "🔒 Génération du fichier mot de passe..."
+           
             mkdir -p $TARGET_DIR/atelier1
+           
+            # Suppression de l'ancien fichier pour éviter les conflits
             rm -f $TARGET_DIR/atelier1/.htpasswd
-
-            # --- Vérifier si htpasswd est installé ---
-            if ! command -v htpasswd &> /dev/null; then
-                echo "htpasswd non trouvé, installation..."
-                sudo apt-get update && sudo apt-get install -y apache2-utils
-            fi
-
-            # Crée le fichier .htpasswd avec admin / PASS_CLAIR
-            htpasswd -cb $TARGET_DIR/atelier1/.htpasswd admin "$PASS_CLAIR"
-
+           
+            # UTILISATION DE LA COMMANDE LINUX NATIVE
+            # -c : créer un nouveau fichier
+            # -b : mode batch (on donne le mdp direct)
+            # Syntaxe : htpasswd -cb [fichier] [user] [password]
+            htpasswd -cb $TARGET_DIR/atelier1/.htpasswd admin $PASS_CLAIR
+           
             # Vérification finale
             if [ -f "$TARGET_DIR/atelier1/.htpasswd" ]; then
                 echo "✅ Fichier .htpasswd généré avec succès."
+                # Affiche les permissions pour être sûr (optionnel)
                 ls -l $TARGET_DIR/atelier1/.htpasswd
             else
                 echo "❌ Echec de la création du fichier mot de passe."
