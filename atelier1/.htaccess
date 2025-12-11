@@ -1,5 +1,4 @@
-AuthName "Accès protégé"
+AuthName "Acces Restreint"
 AuthType Basic
 AuthUserFile /home/evrane/www/atelier1/.htpasswd
 Require valid-user
- 
